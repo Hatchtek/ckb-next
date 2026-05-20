@@ -223,6 +223,7 @@ typedef enum protocol_
     PROTO_NXP,
     PROTO_BRAGI,
     PROTO_LEGACY,
+    _PROTO_MAX,
 } protocol_t;
 
 typedef enum pollrate_ {
@@ -351,6 +352,8 @@ typedef struct usbdevice_ {
     uchar input_endpoints[USB_EP_MAX+1];
     // Protocol
     protocol_t protocol;
+    // Protocol version (Unknown = -1)
+    signed char protocol_version;
     // Poll thread
     pthread_t* pollthread;
     // Size in bytes of the primary output endpoint
