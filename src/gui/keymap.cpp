@@ -808,32 +808,35 @@ static QHash<QString, Key> getMap(KeyMap::Model model, KeyMap::Layout layout){
         map["rightbar10"] = {nullptr, "Right Light Bar 10", "rightbar10", 292, 79, 6, 9, true, false};
         map["rightbar11"] = {nullptr, "Right Light Bar 11", "rightbar11", 292, 88, 6, 9, true, false};
 
-        map["ctrlwheelb"] = map["light"];
-        map["ctrlwheelb"].name = "ctrlwheelb";
-        map["ctrlwheelb"]._friendlyName = "Control Wheel Button";
-        map["ctrlwheelb"].height = map["ctrlwheelb"].width;
-        map["ctrlwheelb"].y -= 3;
+        map["profswitch"] = {nullptr,  "Profile Switch", "profswitch", 20, 10, 11, 9, true, true};
+        map["ctrlwheelccw"] = {nullptr, "Control Wheel Counterclockwise", "ctrlwheelccw", 28, 10, 6, 16, false, true };
+        map["ctrlwheelb"] = {nullptr, "Control Wheel Button", "ctrlwheelb", 35, 10, 11, 11, true, true };
+        map["ctrlwheelcw"] = {nullptr, "Control Wheel Clockwise", "ctrlwheelcw", 42, 10, 6, 16, false, true };
+        map["lock"] = {nullptr, "Lock", "lock", 50, 10, 11, 9, true, true};
 
-        map["profswitch"].height += 1;
-        map["lock"].height = map["mute"].height = map["profswitch"].height;
+        map["mute"].height = map["profswitch"].height;
         map["mute"].y = map["profswitch"].y = map["lock"].y = map["ctrlwheelb"].y;
         map["volup"].y = map["ctrlwheelb"].y - 2;
         map["voldn"].y = map["ctrlwheelb"].y + 2;
-        map["profswitch"].x -= 1;
-        map["lock"].x += 1;
 
-        map["ctrlwheel1"] = {nullptr, "Control Wheel 22.5°",  "ctrlwheel1", 60+2, 10, 8, 6, true, false};
-        map["ctrlwheel2"] = {nullptr, "Control Wheel 67.5°",  "ctrlwheel2", 60+3, 10+1, 5, 8, true, false};
-        map["ctrlwheel3"] = {nullptr, "Control Wheel 112.5°", "ctrlwheel3", 60+3, 10+2, 5, 8, true, false};
-        map["ctrlwheel4"] = {nullptr, "Control Wheel 157.5°", "ctrlwheel4", 60+2, 10+3, 8, 6, true, false};
-        map["ctrlwheel5"] = {nullptr, "Control Wheel 202.5°", "ctrlwheel5", 60+1, 10+3, 8, 6, true, false};
-        map["ctrlwheel6"] = {nullptr, "Control Wheel 247.5°", "ctrlwheel6", 60, 10+2, 5, 8, true, false};
-        map["ctrlwheel7"] = {nullptr, "Control Wheel 292.5°", "ctrlwheel7", 60, 10+1, 5, 8, true, false};
-        map["ctrlwheel8"] = {nullptr, "Control Wheel 337.5°", "ctrlwheel8", 60+1, 10, 8, 6, true, false};
+        map["ctrlwheel1"] = {nullptr, "Control Wheel 22.5°",  "ctrlwheel1", 35+2, 10, 8, 6, true, false};
+        map["ctrlwheel2"] = {nullptr, "Control Wheel 67.5°",  "ctrlwheel2", 35+3, 10+1, 5, 8, true, false};
+        map["ctrlwheel3"] = {nullptr, "Control Wheel 112.5°", "ctrlwheel3", 35+3, 10+2, 5, 8, true, false};
+        map["ctrlwheel4"] = {nullptr, "Control Wheel 157.5°", "ctrlwheel4", 35+2, 10+3, 8, 6, true, false};
+        map["ctrlwheel5"] = {nullptr, "Control Wheel 202.5°", "ctrlwheel5", 35+1, 10+3, 8, 6, true, false};
+        map["ctrlwheel6"] = {nullptr, "Control Wheel 247.5°", "ctrlwheel6", 35, 10+2, 5, 8, true, false};
+        map["ctrlwheel7"] = {nullptr, "Control Wheel 292.5°", "ctrlwheel7", 35, 10+1, 5, 8, true, false};
+        map["ctrlwheel8"] = {nullptr, "Control Wheel 337.5°", "ctrlwheel8", 35+1, 10, 8, 6, true, false};
 
         map["logoleft"] = {nullptr, "Logo Left", "logoleft", 134, 10, 10, 10, true, false};
         map["logo"] = {nullptr, "Logo", "logo", 144, 10, 10, 10, true, false};
         map["logoright"] = {nullptr, "Logo Right", "logoright", 154, 10, 10, 10, true, false};
+
+        // Replace rwin with Fn
+        map["fn"] = KStrafeKeys[3];
+        map["fn"].x = map["rwin"].x;
+        map["fn"].y = map["rwin"].y;
+        map.remove("rwin");
 
         map.remove("light");
         break;
@@ -919,6 +922,36 @@ static QHash<QString, Key> getMap(KeyMap::Model model, KeyMap::Layout layout){
         map["light"].height = 8;
         map["lock"].x = 202 - K70_X_START;
         map["lock"].height = 8;
+        break;
+    }
+    case KeyMap::K70_CORE_RGB:{
+        map = getMap(KeyMap::K70, layout);
+        map["lock"] = {nullptr, "Lock", "lock", 20, 2, NS, false, true}; // F1 alternate
+        map["profswitch"] = {nullptr, "Profile Switch", "profswitch", 32, 2, 11, 11, false, true}; // F2 alternate
+        map["light"] = {nullptr, "Light", "light", 50, 2, NS, false, true}; // F3 and F4 alternate
+        map["stop"] = {nullptr, "Stop", "stop", 76, 2, 11, 11, false, true}; // F5 alternate
+        map["prev"] = {nullptr,  "Previous", "prev", 88, 2, 11, 11, false, true}; // F6 alternate
+        map["play"] = {nullptr,  "Play/Pause", "play", 100, 2, 11, 11, false, true}; // F7 alternate
+        map["next"] = {nullptr,  "Next", "next", 112, 2, 11, 11, false, true}; // F8 alternate
+
+        // This is the media button that defaults to play
+        // We already have a play Fn button so we want to map it to something else so it can be programmed
+        map["g1"] = {nullptr,  "Play/Pause", "g1", 227, 14, NS, false, true};
+
+        // Instead of a "classic" volume barrel/mute button, the K70 CORE RGB has a general-purpose controlwheel, which
+        // is by default bound to "voldn"/"mute"/"volup" for rotation ccw/push/rotation cw respectively.
+        // The dial itself has no led, in HW mode the F12 key is used for indication.
+        map.remove("mute");
+        map.remove("volup");
+        map.remove("voldn");
+        map["ctrlwheelccw"] = {nullptr, "Control Wheel Counterclockwise", "ctrlwheelccw", 248, 14, 6, 16, false, true };
+        map["ctrlwheelb"] = {nullptr, "Control Wheel Button", "ctrlwheelb", 255, 14, NS, false, true };
+        map["ctrlwheelcw"] = {nullptr, "Control Wheel Clockwise", "ctrlwheelcw", 262, 14, 6, 16, false, true };
+
+        // Replace rwin with Fn
+        map["fn"] = KStrafeKeys[3];
+        map["fn"].x = map["rwin"].x;
+        map.remove("rwin");
         break;
     }
     case KeyMap::STRAFE_MK2:{
@@ -1695,6 +1728,8 @@ KeyMap::Model KeyMap::getModel(const QString& name){
         return K65_MINI;
     if(lower == "k70pro")
         return K70_PRO;
+    if(lower == "k70_core_rgb")
+        return K70_CORE_RGB;
     return NO_MODEL;
 }
 
@@ -1782,6 +1817,8 @@ QString KeyMap::getModel(KeyMap::Model model){
         return "k65_mini";
     case K70_PRO:
         return "k70pro";
+    case K70_CORE_RGB:
+        return "k70_core_rgb";
     default:
         return "";
     }
@@ -1797,6 +1834,8 @@ KeyMap KeyMap::fromName(const QString &name){
 int KeyMap::modelWidth(Model model){
     switch(model){
     case K60:
+        return K60_WIDTH;
+    case K70_CORE_RGB:
         return K60_WIDTH;
     case K60_TKL:
         return K60_TKL_WIDTH;
@@ -1871,6 +1910,7 @@ int KeyMap::modelHeight(Model model){
     case K70MK2:
     case K70_PRO:
     case K70_TKL:
+    case K70_CORE_RGB:
     case K95:
     case K95L:
     case STRAFE:

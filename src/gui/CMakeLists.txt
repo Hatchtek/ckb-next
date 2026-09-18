@@ -27,7 +27,7 @@
 
 add_executable(ckb-next "")
 set_property(TARGET ckb-next PROPERTY AUTOGEN_TARGET_DEPENDS ckb-next-lrelease)
-add_custom_target(gui DEPENDS ckb-next)
+add_custom_target(gui DEPENDS ckb-next ckb-next-sinfo animations)
 
 # Declare we want macOS Bundle
 if (MACOS)
@@ -74,6 +74,8 @@ if (MACOS OR LINUX)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Network Gui)
     if(QT_VERSION VERSION_GREATER_EQUAL 6)
         find_package(Qt6 REQUIRED COMPONENTS OpenGLWidgets)
+    else()
+        find_package(OpenGL REQUIRED)
     endif()
     find_package(ZLIB REQUIRED)
     find_package(QuaZip REQUIRED)
@@ -102,6 +104,10 @@ elseif (LINUX)
         find_package(Qt5 REQUIRED COMPONENTS X11Extras)
     endif ()
     message(STATUS "Using Qt${QT_VERSION_MAJOR}")
+    if (QT_VERSION VERSION_LESS "6" AND USE_WAYLAND)
+        set(USE_WAYLAND OFF)
+        message(STATUS "Wayland features disabled (requires Qt 6)")
+    endif ()
 endif ()
 
 # Automatically handle MOC, UIC and RCC
@@ -122,9 +128,7 @@ if (MACOS OR LINUX)
               animdetailsdialog.cpp
               animscript.cpp
               animsettingdialog.cpp
-              autorun.cpp
               batterysystemtrayicon.cpp
-              ckbmainbackgroundcolour.cpp
               ckbsettings.cpp
               ckbsettingswriter.cpp
               ckbsystemquirks.cpp
@@ -134,6 +138,7 @@ if (MACOS OR LINUX)
               clickeventpushbutton.cpp
               colorbutton.cpp
               colormap.cpp
+              daemonwarndialog.cpp
               extrasettingswidget.cpp
               fwupgradedialog.cpp
               gradientbutton.cpp
@@ -181,8 +186,6 @@ if (MACOS OR LINUX)
               animdetailsdialog.h
               animscript.h
               animsettingdialog.h
-              autorun.h
-              ckbmainbackgroundcolour.h
               ckbsettings.h
               ckbsettingswriter.h
               ckbsystemquirks.h
@@ -193,6 +196,7 @@ if (MACOS OR LINUX)
               clickeventpushbutton.h
               colorbutton.h
               colormap.h
+              daemonwarndialog.h
               extrasettingswidget.h
               fwupgradedialog.h
               gradientbutton.h
@@ -247,6 +251,7 @@ if (MACOS OR LINUX)
               animdetailsdialog.ui
               animsettingdialog.ui
               ckbupdaterwidget.ui
+              daemonwarndialog.ui
               extrasettingswidget.ui
               fwupgradedialog.ui
               gradientdialog.ui
@@ -413,41 +418,36 @@ elseif (LINUX)
     )
 
     if (USE_WAYLAND)
-        find_package(Wayland COMPONENTS Client REQUIRED)
-        find_package(WaylandProtocols REQUIRED)
         find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS WaylandClient)
+        find_package(WaylandProtocols 1.27 REQUIRED)
 
-        if (QT_VERSION VERSION_GREATER_EQUAL "6.0.0")
-            if (NOT EXISTS ${WaylandProtocols_DATADIR}/staging/ext-idle-notify/ext-idle-notify-v1.xml)
-                message(FATAL_ERROR "Wayland ext-idle-notify-v1 protocol is not found. Either install them or pass -DUSE_WAYLAND=0 to disable idle detection.")
-            endif ()
+        if (NOT EXISTS ${WaylandProtocols_DATADIR}/staging/ext-idle-notify/ext-idle-notify-v1.xml)
+            message(FATAL_ERROR "Wayland ext-idle-notify-v1 protocol is not found. Either install them or pass -DUSE_WAYLAND=0 to disable idle detection.")
+        endif ()
 
-            if (Qt6_VERSION VERSION_GREATER_EQUAL "6.8.0")
-                set(private_code_option  "PRIVATE_CODE")
-            endif()
-
-            qt_generate_wayland_protocol_client_sources(
-               ckb-next
-                   ${private_code_option}
-                   FILES
-                       ${WaylandProtocols_DATADIR}/staging/ext-idle-notify/ext-idle-notify-v1.xml
-            )
-
-            target_sources(
-                ckb-next
-                    PRIVATE
-                        wayland/waylandidletimer.cpp
-                        wayland/waylandidletimer.h
-            )
-
-            target_compile_definitions(
-                ckb-next
-                    PRIVATE
-                        USE_WAYLAND_IDLE_NOTIFY
-            )
-        else()
-            message(FATAL_ERROR "Wayland idle detection required Qt 6 or later. Either build with Qt 6 or pass -DUSE_WAYLAND=0 to disable idle detection.")
+        if (Qt6_VERSION VERSION_GREATER_EQUAL "6.8.0")
+            set(private_code_option  "PRIVATE_CODE")
         endif()
+
+        qt_generate_wayland_protocol_client_sources(
+            ckb-next
+                ${private_code_option}
+                FILES
+                    ${WaylandProtocols_DATADIR}/staging/ext-idle-notify/ext-idle-notify-v1.xml
+        )
+
+        target_sources(
+            ckb-next
+                PRIVATE
+                    wayland/waylandidletimer.cpp
+                    wayland/waylandidletimer.h
+        )
+
+        target_compile_definitions(
+            ckb-next
+                PRIVATE
+                    USE_WAYLAND_IDLE_NOTIFY
+        )
 
         target_compile_definitions(
             ckb-next
@@ -461,6 +461,14 @@ elseif (LINUX)
                     Wayland::Client
                     Qt${QT_VERSION_MAJOR}::WaylandClient
         )
+
+        if (WaylandProtocols_VERSION VERSION_GREATER_EQUAL "1.40")
+            target_compile_definitions(
+                ckb-next
+                    PRIVATE
+                        USE_WAYLAND_INPUT_IDLE_NOTIFY
+            )
+        endif ()
 
         if (Qt6_VERSION VERSION_LESS "6.5.0")
             target_link_libraries(
@@ -574,26 +582,19 @@ if (MACOS)
       "${CMAKE_SOURCE_DIR}/macos/org.ckb-next.plist"
       "${CMAKE_CURRENT_BINARY_DIR}/org.ckb-next.plist"
         COPYONLY)
-
-    if (NOT TEXT_QRC_STRING)
-        set(TEXT_QRC_STRING "<file>org.ckb-next.plist</file>\n")
-    endif ()
-
 elseif (LINUX)
-    if (NOT TEXT_QRC_STRING)
-        set(TEXT_QRC_STRING "<file>ckb-next.autostart.desktop</file>\n")
-    endif ()
-
     # Generate and import desktop files
     message(STATUS "Generating and importing ckb-next.desktop")
+    set(CKB_NEXT_BACKGROUND_ARG "")
     configure_file(
       "${CMAKE_SOURCE_DIR}/linux/ckb-next.desktop.in"
       "${CMAKE_CURRENT_BINARY_DIR}/ckb-next.desktop"
         @ONLY)
-    message(STATUS "Generating and importing ckb-next.autostart.desktop")
+    message(STATUS "Generating autostart/ckb-next.desktop")
+    set(CKB_NEXT_BACKGROUND_ARG " --background")
     configure_file(
-      "${CMAKE_SOURCE_DIR}/linux/ckb-next.autostart.desktop.in"
-      "${CMAKE_CURRENT_BINARY_DIR}/ckb-next.autostart.desktop"
+      "${CMAKE_SOURCE_DIR}/linux/ckb-next.desktop.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/autostart/ckb-next.desktop"
         @ONLY)
 endif ()
 
@@ -655,6 +656,16 @@ if (QT_VERSION VERSION_GREATER_EQUAL "6")
         ckb-next
             PRIVATE
                 Qt6::OpenGLWidgets)
+else()
+    target_include_directories(
+        ckb-next
+            SYSTEM
+            PRIVATE
+              OpenGL::GL)
+    target_link_libraries(
+        ckb-next
+            PRIVATE
+            OpenGL::GL)
 endif ()
 
 endif ()
@@ -793,6 +804,14 @@ elseif (LINUX)
     install(
         FILES "${CMAKE_CURRENT_BINARY_DIR}/ckb-next.desktop"
         DESTINATION "share/applications"
+        PERMISSIONS
+        OWNER_READ OWNER_WRITE
+        GROUP_READ
+        WORLD_READ)
+
+    install(
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/autostart/ckb-next.desktop"
+        DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/xdg/autostart"
         PERMISSIONS
         OWNER_READ OWNER_WRITE
         GROUP_READ
